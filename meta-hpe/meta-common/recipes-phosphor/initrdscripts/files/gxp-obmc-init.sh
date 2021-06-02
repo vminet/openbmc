@@ -180,11 +180,58 @@ check_dip() {
   return 1
 }
 
+start_recovery() {
+  mkdir -p /mnt/usb
+  mount $1 /mnt/usb
+  if [ -f "/mnt/usb/openbmc-hpe-recovery-image.mtd" ]; then
+    if [ -f "/mnt/usb/openbmc-hpe-recovery-image.mtd.sig" ]; then
+      /sbin/check_signature /etc/activationdata/OpenBMC/publickey /mnt/usb/openbmc-hpe-recovery-image.mtd
+      if [ $? -ne 0 ]; then
+        echo "Error checking the signatgure of openbmc-hpe-recovery-image.mtd"
+        sleep 5
+        reboot -f
+      fi
+      mtddev=$(findmtd bmc)
+      echo "Flashing...."
+      flashcp -v /mnt/usb/openbmc-hpe-recovery-image.mtd /dev/${mtddev}
+      sync
+      echo "Done, rebooting..."
+      reboot -f
+    fi
+    echo "Error file openbmc-hpe-recovery-image.mtd.sig not found"
+  fi
+  echo "Error file openbmc-hpe-recovery-image.mtd not found"
+  sleep 5
+  reboot -f
+}
+
 rofs=$(findmtd rofs)
 rwfs=$(findmtd rwfs)
 
 rodev=/dev/mtdblock${rofs#mtd}
 rwdev=/dev/mtdblock${rwfs#mtd}
+
+
+if [ -n "$(grep 'recovery' /proc/cmdline)" ]; then
+    echo "*** Recovery mode             ***"
+    echo "*** Searching for the USB     ***"
+    for i in $(seq 1 5); do
+        if [ -n "$(dmesg | grep 'USB Mass Storage device detected')" ] ; then
+            break
+        fi
+        sleep 1
+    done
+    sleep 2
+    usbdev=$(blkid |grep vfat|cut -d':' -f1)
+    if [ ! -z "${usbdev}" ]; then
+        echo "*** USB Found using ${usbdev} ***"
+	start_recovery ${usbdev}
+    fi
+    echo "*** USB not found,something goes wrong"
+    exec /bin/sh
+    reboot -f
+fi
+
 
 # Set to y for yes, anything else for no.
 force_rwfst_jffs2=y

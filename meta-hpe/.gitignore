@@ -1,0 +1,4 @@
+// HPE-specific .gitignore
+customer-key-block
+*.pem
+*bootblock.bin
