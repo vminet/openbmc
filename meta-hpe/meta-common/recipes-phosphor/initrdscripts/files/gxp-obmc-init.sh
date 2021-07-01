@@ -187,7 +187,7 @@ start_recovery() {
     if [ -f "/mnt/usb/openbmc-hpe-recovery-image.mtd.sig" ]; then
       /sbin/check_signature /etc/activationdata/OpenBMC/publickey /mnt/usb/openbmc-hpe-recovery-image.mtd
       if [ $? -ne 0 ]; then
-        echo "Error checking the signatgure of openbmc-hpe-recovery-image.mtd"
+        echo "Error checking the signature of openbmc-hpe-recovery-image.mtd"
         sleep 5
         reboot -f
       fi
